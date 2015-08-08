@@ -2,10 +2,13 @@ use std::net::{TcpStream,SocketAddr,ToSocketAddrs};
 use std::io::{BufReader,BufWriter,ErrorKind,Error};
 
 use capnp::Error as CapnpError;
-use messages::{self,TargettedOrder,Notification,AuthenticationToken};
+
+use messages::{self,TargettedOrder,Notification};
 
 pub struct NetworkSettings {
     server_addr: SocketAddr,
+    // TODO
+    // AuthenticationToken
 }
 
 impl NetworkSettings {
@@ -55,7 +58,7 @@ impl NetworkReader {
     }
 }
 
-pub fn connect(settings: &NetworkSettings, _token: &AuthenticationToken)
+pub fn connect(settings: &NetworkSettings)
 -> Result<(NetworkReader, NetworkWriter),CapnpError> {
     let tokens = messages::forge_authentication_tokens();
     for token in tokens {
