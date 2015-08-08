@@ -38,6 +38,12 @@ pub enum Order {
 pub enum Notification {
     Walk(WalkNotification),
     Say(SayNotification),
+    Location {
+        x: i32,
+        y: i32,
+        id: u64,
+    },
+    ThisIsYou(u64),
 }
 
 #[derive(Debug)]
