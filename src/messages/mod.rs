@@ -74,4 +74,8 @@ impl Notification {
             y: y,
         }
     }
+
+    pub fn this_is_you(id: u64) -> Notification {
+        Notification::ThisIsYou(id)
+    }
 }

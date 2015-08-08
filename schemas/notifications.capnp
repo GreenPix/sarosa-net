@@ -26,6 +26,10 @@ struct Notification {
       location @8: Location;
     }
 
+    thisIsYou :group {
+      id @9: UInt64;
+    }
+
 
 # TODO: Remove that part once we have UDP
     gameTick :group {

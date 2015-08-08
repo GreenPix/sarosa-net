@@ -25,8 +25,16 @@ pub fn deserialize<T: Read>(reader: &mut T) -> Result<Notification,Error> {
         notification::Which::EntityLocation(location) => {
             deserialize_location(location)
         }
+        notification::Which::ThisIsYou(id) => {
+            deserialize_this_is_you(id)
+        }
         _ => unimplemented!(),
     }
+}
+
+fn deserialize_this_is_you(reader: notification::this_is_you::Reader) -> Result<Notification,Error> {
+    let id = reader.get_id();
+    Ok(Notification::this_is_you(id))
 }
 
 fn deserialize_walk(reader: notification::entity_walk::Reader) -> Result<Notification,Error> {
