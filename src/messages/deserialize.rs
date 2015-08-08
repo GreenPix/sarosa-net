@@ -6,7 +6,7 @@ use capnp::message::{ReaderOptions,Reader};
 use byteorder::{self,LittleEndian, ReadBytesExt};
 
 use super::Notification;
-use notifications_capnp;
+use notifications_capnp::notification;
 use authentication_capnp::error_code;
 
 pub fn deserialize<T: Read>(reader: &mut T) -> Result<Notification,Error> {
@@ -17,21 +17,30 @@ pub fn deserialize<T: Read>(reader: &mut T) -> Result<Notification,Error> {
     };
     let options = ReaderOptions::new();
     let message_reader = try!(serialize::read_message(reader, options));
-    let root = try!(message_reader.get_root::<notifications_capnp::notification::Reader>());
+    let root = try!(message_reader.get_root::<notification::Reader>());
     match try!(root.which()) {
-        notifications_capnp::notification::Which::EntityWalk(walk) => {
-            let walk_notif = try!(deserialize_walk(walk));
-            Ok(walk_notif)
+        notification::Which::EntityWalk(walk) => {
+            deserialize_walk(walk)
+        }
+        notification::Which::EntityLocation(location) => {
+            deserialize_location(location)
         }
         _ => unimplemented!(),
     }
 }
 
-fn deserialize_walk(reader: notifications_capnp::notification::entity_walk::Reader) -> Result<Notification,Error> {
+fn deserialize_walk(reader: notification::entity_walk::Reader) -> Result<Notification,Error> {
     let id = reader.get_id();
     let orientation = try!(reader.get_orientation());
-    let notif = Notification::walk(id, orientation.into());
-    Ok(notif)
+    Ok(Notification::walk(id, orientation.into()))
+}
+
+fn deserialize_location(reader: notification::entity_location::Reader) -> Result<Notification,Error> {
+    let id = reader.get_id();
+    let location = try!(reader.get_location());
+    let x = location.get_x();
+    let y = location.get_y();
+    Ok(Notification::location(id, x, y))
 }
 
 pub fn deserialize_error_code<T: Read>(reader: &mut T) -> Result<i64,Error> {

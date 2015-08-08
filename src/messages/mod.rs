@@ -36,40 +36,42 @@ pub enum Order {
 
 #[derive(Debug)]
 pub enum Notification {
-    Walk(WalkNotification),
-    Say(SayNotification),
+    Walk {
+        entity: u64,
+        orientation: Option<Direction>,
+    },
+    Say {
+        entity: u64,
+        message: String,
+    },
     Location {
-        x: i32,
-        y: i32,
-        id: u64,
+        entity: u64,
+        x: f32,
+        y: f32,
     },
     ThisIsYou(u64),
 }
 
-#[derive(Debug)]
-pub struct WalkNotification {
-    origin: u64,
-    orientation: Option<Direction>,
-}
-
-#[derive(Debug)]
-pub struct SayNotification {
-    origin: u64,
-    message: String,
-}
-
 impl Notification {
     pub fn walk(id: u64, orientation: Option<Direction>) -> Notification {
-        Notification::Walk(WalkNotification {
-            origin: id,
+        Notification::Walk {
+            entity: id,
             orientation: orientation,
-        })
+        }
     }
 
     pub fn say(id: u64, message: String) -> Notification {
-        Notification::Say(SayNotification {
-            origin: id,
+        Notification::Say {
+            entity: id,
             message: message,
-        })
+        }
+    }
+
+    pub fn location(id: u64, x: f32, y: f32) -> Notification {
+        Notification::Location {
+            entity: id,
+            x: x,
+            y: y,
+        }
     }
 }

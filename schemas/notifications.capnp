@@ -21,6 +21,11 @@ struct Notification {
       orientation @5: Common.Direction;
     }
 
+    entityLocation :group {
+      id @7: UInt64;
+      location @8: Location;
+    }
+
 
 # TODO: Remove that part once we have UDP
     gameTick :group {
@@ -35,8 +40,8 @@ struct State {
 }
 
 struct Location {
-  x @0: UInt32;
-  y @1: UInt32;
+  x @0: Float32;
+  y @1: Float32;
 }
 
 struct Entity {
