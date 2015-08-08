@@ -1,10 +1,11 @@
 use std::net::{TcpStream,SocketAddr,ToSocketAddrs};
-use std::io::{BufReader,BufWriter,ErrorKind,Error};
+use std::io::{BufReader,BufWriter,ErrorKind,Error,Write};
 
 use capnp::Error as CapnpError;
 
 use messages::{self,TargettedOrder,Notification};
 
+#[derive(Debug,Clone,Copy)]
 pub struct NetworkSettings {
     server_addr: SocketAddr,
     // TODO
@@ -43,6 +44,10 @@ impl NetworkWriter {
 
     pub fn write(&mut self, order: &TargettedOrder) -> Result<(),Error> {
         messages::serialize(&mut self.socket, order)
+    }
+
+    pub fn flush(&mut self) -> Result<(),Error> {
+        self.socket.flush()
     }
 }
 
