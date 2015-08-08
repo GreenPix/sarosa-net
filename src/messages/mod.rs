@@ -3,8 +3,11 @@ mod deserialize;
 mod util;
 
 pub use self::serialize::serialize;
-pub use self::serialize::fake_authentication_token;
+pub use self::serialize::forge_authentication_tokens;
+pub use self::serialize::send_authentication_token;
+pub use self::serialize::AuthenticationToken;
 pub use self::deserialize::deserialize;
+pub use self::deserialize::deserialize_error_code;
 
 #[derive(Debug,Clone,Copy)]
 pub enum Direction {

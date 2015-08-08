@@ -6,6 +6,7 @@ use capnp::message::{ReaderOptions,Reader};
 
 use super::Notification;
 use notifications_capnp;
+use authentication_capnp::error_code;
 
 pub fn deserialize<T: Read>(reader: &mut T) -> Result<Notification,Error> {
     let options = ReaderOptions::new();
@@ -27,3 +28,9 @@ fn deserialize_walk(reader: notifications_capnp::notification::entity_walk::Read
     Ok(notif)
 }
 
+pub fn deserialize_error_code<T: Read>(reader: &mut T) -> Result<i64,Error> {
+    let options = ReaderOptions::new();
+    let message_reader = try!(serialize::read_message(reader, options));
+    let root = try!(message_reader.get_root::<error_code::Reader>());
+    Ok(root.get_code())
+}

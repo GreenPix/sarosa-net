@@ -3,6 +3,7 @@ extern crate byteorder;
 #[macro_use] extern crate log;
 
 pub mod messages;
+pub mod net;
 
 #[allow(dead_code)]
 mod notifications_capnp {

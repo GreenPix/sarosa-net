@@ -3,3 +3,7 @@
 struct AuthenticationToken {
   data0 @0: UInt64;
 }
+
+struct ErrorCode {
+  code @0: Int64;
+}
