@@ -1,0 +1,3 @@
+[submodule "schemas"]
+	path = schemas
+	url = https://gitlab.com/slayers-online/lycan-schemas.git
