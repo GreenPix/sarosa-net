@@ -2,12 +2,10 @@
 name = "sarosa-net"
 version = "0.1.0"
 authors = ["Vaelden <maugan.villatel@gmail.com>"]
-build = "build.rs"
-
-[build-dependencies]
-capnpc = "*"
 
 [dependencies]
-capnp = "*"
 byteorder = "*"
 log = "*"
+
+[dependencies.lycan-serialize]
+git = "ssh://git@gitlab.com/slayers-online/lycan-serialize.git"

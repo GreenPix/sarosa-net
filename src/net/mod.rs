@@ -1,9 +1,10 @@
 use std::net::{TcpStream,SocketAddr,ToSocketAddrs};
 use std::io::{self,BufReader,BufWriter,ErrorKind,Error,Write};
 
-use capnp::Error as CapnpError;
+use lycan_serialize::Error as CapnpError;
+use byteorder::{ReadBytesExt,LittleEndian};
 
-use messages::{self,TargettedOrder,Notification};
+use messages::{self,EntityOrder,Notification,ErrorCode};
 
 #[derive(Debug,Clone,Copy)]
 pub struct NetworkSettings {
@@ -42,8 +43,8 @@ impl NetworkWriter {
         }
     }
 
-    pub fn write(&mut self, order: &TargettedOrder) -> Result<(), Error> {
-        messages::serialize(&mut self.socket, order)
+    pub fn write(&mut self, order: &EntityOrder) -> Result<(),Error> {
+        order.serialize(&mut self.socket)
     }
 
     pub fn flush(&mut self) -> Result<(),Error> {
@@ -65,9 +66,16 @@ impl NetworkReader {
     }
 
     pub fn read(&mut self) -> Result<Notification, NetworkError> {
-        messages::deserialize(&mut self.socket).map_err(|err| {
+        let _size_notification = match self.socket.read_u64::<LittleEndian>() {
+            Err(err) => {
+                error!("Network error: {}", err);
+                return Err(NetworkError::DisconnectedFromServer);
+            }
+            Ok(size) => size,
+        };
+        Notification::deserialize(&mut self.socket).map_err(|err| {
+            error!("Network error: {}", err);
             match err {
-                CapnpError::Decode { .. } => NetworkError::DeserializationError,
                 CapnpError::Io(e) => {
                     match e.kind() {
                         io::ErrorKind::BrokenPipe => NetworkError::DisconnectedFromServer,
@@ -75,6 +83,7 @@ impl NetworkReader {
                         _ => NetworkError::UnknownError,
                     }
                 }
+                _ => NetworkError::DeserializationError,
             }
         })
     }
@@ -85,12 +94,15 @@ pub fn connect(settings: &NetworkSettings)
     let tokens = messages::forge_authentication_tokens();
     for token in tokens {
         let mut stream = try!(TcpStream::connect(settings.server_addr));
-        try!(messages::send_authentication_token(&mut stream, &token));
-        let response = try!(messages::deserialize_error_code(&mut stream));
-        if response == 0 {
-            let reader = NetworkReader::new(try!(stream.try_clone()));
-            let writer = NetworkWriter::new(stream);
-            return Ok((reader,writer));
+        try!(token.serialize(&mut stream));
+        let response = try!(ErrorCode::deserialize(&mut stream));
+        match response {
+            ErrorCode::Success => {
+                let reader = NetworkReader::new(try!(stream.try_clone()));
+                let writer = NetworkWriter::new(stream);
+                return Ok((reader,writer));
+            }
+            ErrorCode::Error => {}
         }
     }
     Err(Error::new(ErrorKind::InvalidInput, "Invalid authentication tokens").into())
