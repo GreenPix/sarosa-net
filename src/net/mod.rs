@@ -1,5 +1,5 @@
 use std::net::{TcpStream,SocketAddr,ToSocketAddrs};
-use std::io::{BufReader,BufWriter,ErrorKind,Error,Write};
+use std::io::{self,BufReader,BufWriter,ErrorKind,Error,Write};
 
 use capnp::Error as CapnpError;
 
@@ -42,13 +42,19 @@ impl NetworkWriter {
         }
     }
 
-    pub fn write(&mut self, order: &TargettedOrder) -> Result<(),Error> {
+    pub fn write(&mut self, order: &TargettedOrder) -> Result<(), Error> {
         messages::serialize(&mut self.socket, order)
     }
 
     pub fn flush(&mut self) -> Result<(),Error> {
         self.socket.flush()
     }
+}
+
+pub enum NetworkError {
+    DisconnectedFromServer,
+    DeserializationError,
+    UnknownError,
 }
 
 impl NetworkReader {
@@ -58,8 +64,19 @@ impl NetworkReader {
         }
     }
 
-    pub fn read(&mut self) -> Result<Notification,CapnpError> {
-        messages::deserialize(&mut self.socket)
+    pub fn read(&mut self) -> Result<Notification, NetworkError> {
+        messages::deserialize(&mut self.socket).map_err(|err| {
+            match err {
+                CapnpError::Decode { .. } => NetworkError::DeserializationError,
+                CapnpError::Io(e) => {
+                    match e.kind() {
+                        io::ErrorKind::BrokenPipe => NetworkError::DisconnectedFromServer,
+                        io::ErrorKind::ConnectionAborted => NetworkError::DisconnectedFromServer,
+                        _ => NetworkError::UnknownError,
+                    }
+                }
+            }
+        })
     }
 }
 
