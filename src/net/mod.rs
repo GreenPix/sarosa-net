@@ -4,7 +4,7 @@ use std::io::{self,BufReader,BufWriter,ErrorKind,Error,Write};
 use lycan_serialize::Error as CapnpError;
 use byteorder::{ReadBytesExt,LittleEndian};
 
-use messages::{self,EntityOrder,Notification,ErrorCode};
+use messages::{self,EntityOrder,Notification,ErrorCode,GameCommand};
 
 #[derive(Debug,Clone,Copy)]
 pub struct NetworkSettings {
@@ -94,7 +94,8 @@ pub fn connect(settings: &NetworkSettings)
     let tokens = messages::forge_authentication_tokens();
     for token in tokens {
         let mut stream = try!(TcpStream::connect(settings.server_addr));
-        try!(token.serialize(&mut stream));
+        let command = GameCommand::Authenticate(token);
+        try!(command.serialize(&mut stream));
         let response = try!(ErrorCode::deserialize(&mut stream));
         match response {
             ErrorCode::Success => {
