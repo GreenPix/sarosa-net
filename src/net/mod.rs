@@ -1,5 +1,7 @@
 use std::net::{TcpStream,SocketAddr,ToSocketAddrs};
 use std::io::{self,BufReader,BufWriter,ErrorKind,Error,Write};
+use std::fmt;
+use std::error;
 
 use lycan_serialize::Error as CapnpError;
 use byteorder::{ReadBytesExt,LittleEndian};
@@ -52,6 +54,7 @@ impl NetworkWriter {
     }
 }
 
+#[derive(Debug,Clone,Copy)]
 pub enum NetworkError {
     DisconnectedFromServer,
     DeserializationError,
@@ -75,27 +78,25 @@ impl NetworkReader {
         };
         Notification::deserialize(&mut self.socket).map_err(|err| {
             error!("Network error: {}", err);
-            match err {
-                CapnpError::Io(e) => {
-                    match e.kind() {
-                        io::ErrorKind::BrokenPipe => NetworkError::DisconnectedFromServer,
-                        io::ErrorKind::ConnectionAborted => NetworkError::DisconnectedFromServer,
-                        _ => NetworkError::UnknownError,
-                    }
-                }
-                _ => NetworkError::DeserializationError,
-            }
+            err.into()
         })
     }
 }
 
 pub fn connect(settings: &NetworkSettings)
--> Result<(NetworkReader, NetworkWriter),CapnpError> {
+-> Result<(NetworkReader, NetworkWriter),NetworkError> {
     let tokens = messages::forge_authentication_tokens();
     for token in tokens {
         let mut stream = try!(TcpStream::connect(settings.server_addr));
         let command = GameCommand::Authenticate(token);
         try!(command.serialize(&mut stream));
+        let _size_notification = match stream.read_u64::<LittleEndian>() {
+            Err(err) => {
+                error!("Network error: {}", err);
+                return Err(NetworkError::DisconnectedFromServer);
+            }
+            Ok(size) => size,
+        };
         let response = try!(ErrorCode::deserialize(&mut stream));
         match response {
             ErrorCode::Success => {
@@ -106,5 +107,43 @@ pub fn connect(settings: &NetworkSettings)
             ErrorCode::Error => {}
         }
     }
-    Err(Error::new(ErrorKind::InvalidInput, "Invalid authentication tokens").into())
+    error!("No valid token, impossible to authenticate");
+    Err(NetworkError::DisconnectedFromServer)
+}
+
+impl From<CapnpError> for NetworkError {
+    fn from(err: CapnpError) -> NetworkError {
+        match err {
+            CapnpError::Io(e) => {
+                e.into()
+            }
+            _ => NetworkError::DeserializationError,
+        }
+    }
+}
+
+impl From<io::Error> for NetworkError {
+    fn from(err: io::Error) -> NetworkError {
+        match err.kind() {
+            io::ErrorKind::BrokenPipe => NetworkError::DisconnectedFromServer,
+            io::ErrorKind::ConnectionAborted => NetworkError::DisconnectedFromServer,
+            _ => NetworkError::UnknownError,
+        }
+    }
+}
+
+impl fmt::Display for NetworkError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl error::Error for NetworkError {
+    fn description(&self) -> &str {
+        match *self {
+            NetworkError::DisconnectedFromServer => "Disconnected from server",
+            NetworkError::DeserializationError   => "Deserialization error",
+            NetworkError::UnknownError           => "Unknown error",
+        }
+    }
 }
