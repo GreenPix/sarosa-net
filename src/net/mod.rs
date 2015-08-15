@@ -69,14 +69,14 @@ impl NetworkReader {
     }
 
     pub fn read(&mut self) -> Result<Notification, NetworkError> {
-        let _size_notification = match self.socket.read_u64::<LittleEndian>() {
+        let size = match self.socket.read_u64::<LittleEndian>() {
             Err(err) => {
                 error!("Network error: {}", err);
                 return Err(NetworkError::DisconnectedFromServer);
             }
             Ok(size) => size,
         };
-        Notification::deserialize(&mut self.socket).map_err(|err| {
+        Notification::deserialize(&mut self.socket,size).map_err(|err| {
             error!("Network error: {}", err);
             err.into()
         })
@@ -87,24 +87,32 @@ pub fn connect(settings: &NetworkSettings)
 -> Result<(NetworkReader, NetworkWriter),NetworkError> {
     let tokens = messages::forge_authentication_tokens();
     for token in tokens {
+        trace!("Connecting to server");
         let mut stream = try!(TcpStream::connect(settings.server_addr));
+        trace!("Connected to server");
         let command = GameCommand::Authenticate(token);
         try!(command.serialize(&mut stream));
-        let _size_notification = match stream.read_u64::<LittleEndian>() {
+        let size = match stream.read_u64::<LittleEndian>() {
             Err(err) => {
                 error!("Network error: {}", err);
                 return Err(NetworkError::DisconnectedFromServer);
             }
             Ok(size) => size,
         };
-        let response = try!(ErrorCode::deserialize(&mut stream));
+        let response = try!(Notification::deserialize(&mut stream,size));
         match response {
-            ErrorCode::Success => {
+            Notification::Response{code: ErrorCode::Success} => {
+                trace!("Success, connected to server");
                 let reader = NetworkReader::new(try!(stream.try_clone()));
                 let writer = NetworkWriter::new(stream);
                 return Ok((reader,writer));
             }
-            ErrorCode::Error => {}
+            Notification::Response{code: ErrorCode::Error} => {
+                trace!("Failed to authenticate with token {:?}", token);
+            }
+            other => {
+                error!("Unexpected notification {:?} (expected a response)", other);
+            }
         }
     }
     error!("No valid token, impossible to authenticate");
