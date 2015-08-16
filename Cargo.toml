@@ -8,7 +8,7 @@ byteorder = "*"
 log = "*"
 
 [dependencies.lycan-serialize]
-git = "ssh://git@gitlab.com/slayers-online/lycan-serialize.git"
+git = "https://github.com/GreenPix/lycan-serialize.git"
 
 [features]
 json = ["lycan-serialize/json"]
