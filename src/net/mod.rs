@@ -3,7 +3,8 @@ use std::io::{self,BufReader,BufWriter,ErrorKind,Error,Write};
 use std::fmt;
 use std::error;
 
-use lycan_serialize::Error as CapnpError;
+use lycan_serialize::Error as LycanError;
+use lycan_serialize::ErrorKind as LycanErrorKind;
 use byteorder::{ReadBytesExt,LittleEndian};
 
 use messages::{self,EntityOrder,Notification,ErrorCode,GameCommand};
@@ -119,11 +120,11 @@ pub fn connect(settings: &NetworkSettings)
     Err(NetworkError::DisconnectedFromServer)
 }
 
-impl From<CapnpError> for NetworkError {
-    fn from(err: CapnpError) -> NetworkError {
-        match err {
-            CapnpError::Io(e) => {
-                e.into()
+impl From<LycanError> for NetworkError {
+    fn from(err: LycanError) -> NetworkError {
+        match err.kind {
+            LycanErrorKind::Disconnected => {
+                NetworkError::DisconnectedFromServer
             }
             _ => NetworkError::DeserializationError,
         }
