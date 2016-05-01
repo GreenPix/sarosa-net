@@ -91,7 +91,7 @@ pub fn connect(settings: &NetworkSettings)
         trace!("Connecting to server");
         let mut stream = try!(TcpStream::connect(settings.server_addr));
         trace!("Connected to server");
-        let command = GameCommand::Authenticate(id, token);
+        let command = GameCommand::Authenticate(id, token.clone());
         try!(command.serialize(&mut stream));
         let size = match stream.read_u64::<LittleEndian>() {
             Err(err) => {

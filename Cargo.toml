@@ -9,6 +9,7 @@ log = "*"
 
 [dependencies.lycan-serialize]
 git = "https://github.com/GreenPix/lycan-serialize.git"
+rev = "04732272"
 
 [features]
 json = ["lycan-serialize/json"]
